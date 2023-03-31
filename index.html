@@ -51,11 +51,22 @@
             background: url('https://cdn.dribbble.com/users/1415337/screenshots/8053026/media/103f66972cf041738948be85dc16c2e7.gif') 50% 50% no-repeat;
             opacity: .8;
         }
+        .alert {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
     </style>
 </head>
 <body>
     <div class="loader"></div>
     <h1>Satheesh Kumar - Assets</h1>
+    <div class="alert" id="api-limit-alert" hidden>
+        <p>You have exceeded your rate limit! Please try again later.</p>
+    </div>
     <table id="table">
         <thead>
             <tr>
@@ -70,9 +81,38 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
 <script type="text/javascript">
-    $(document).ready( function () {
-        $(".loader").fadeOut("slow");
+    function setWithExpiry(key, value, ttl) {
+        const now = new Date()
 
+        const item = {
+            value: value,
+            expiry: now.getTime() + ttl,
+        }
+        localStorage.setItem(key, JSON.stringify(item))
+    }
+
+    function getWithExpiry(key) {
+        const itemStr = localStorage.getItem(key)
+
+        // if the item doesn't exist, return null
+        if (!itemStr) {
+            return null
+        }
+
+        const item = JSON.parse(itemStr)
+        const now = new Date()
+
+        // compare the expiry time of the item with the current time
+        if (now.getTime() > item.expiry) {
+            // If the item is expired, delete the item from storage
+            // and return null
+            localStorage.removeItem(key)
+            return null
+        }
+        return item.value
+    }
+    $(document).ready( async function () {
+        $(".loader").fadeOut("slow");
         $.ajaxPrefilter(function (options, originalOptions, jqXHR) {
             if (options.cache) {
                 var success = originalOptions.success || $.noop,
@@ -80,16 +120,16 @@
 
                 options.cache = false; //remove jQuery cache as we have our own localStorage
                 options.beforeSend = function () {
-                    if (localStorage.getItem(url)) {
-                        success(localStorage.getItem(url));
+                    if (getWithExpiry("git-data")) {
+                        success(JSON.parse(getWithExpiry("git-data")));
                         return false;
                     }
                     return true;
                 };
                 options.success = function (data, textStatus) {
-                    var responseData = JSON.stringify(data.responseJSON);
-                    localStorage.setItem(url, responseData);
-                    if ($.isFunction(success)) success(responseJSON); //call back to original ajax call
+                    var responseData = JSON.stringify(data);
+                    setWithExpiry("git-data", responseData, 10000);
+                    if ($.isFunction(success)) success(data); //call back to original ajax call
                 };
             }
         });
@@ -107,6 +147,10 @@
             ajax: {
                 url: 'https://api.github.com/repos/satheesh1997/assets/git/trees/main?recursive=1',
                 dataSrc: function (json) {
+                    if (json === null || json === undefined || json.tree === null || json.tree === undefined) {
+                        $("#api-limit-alert").show()
+                        return [];
+                    }
                     return json.tree.filter(function (item) {
                         return item.type == 'blob' && item.path != 'README.md' && item.path != 'LICENSE' && item.path != 'favicon.ico' && item.path != 'index.html' && item.path != '404.html' && item.path != 'CNAME';
                     });
