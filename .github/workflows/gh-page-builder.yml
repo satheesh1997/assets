@@ -1,4 +1,4 @@
-name: Deploy to GitHub pages
+name: Generate gh-pages
 on:
   push:
     branches: [ main ]
@@ -19,16 +19,10 @@ jobs:
       run: |
         echo "Generating Meta file..."
         rm -rf .github
-        git init
-        git add -A
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
-        git commit -m 'deploy'
 
     - name: Force push to destination branch
       uses: ad-m/github-push-action@v0.5.0
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         branch: gh-pages
-        force: true
-        directory: ./
+        directory: .
