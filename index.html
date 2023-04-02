@@ -146,7 +146,7 @@
                 { data: 'sha' }
             ],
             ajax: {
-                url: 'https://api.github.com/repos/satheesh1997/assets/git/trees/main?recursive=1',
+                url: 'https://api.github.com/repos/satheesh1997/assets.satheesh.dev/git/trees/main?recursive=1',
                 dataSrc: function (json) {
                     if (json === null || json === undefined || json.tree === null || json.tree === undefined) {
                         $("#api-limit-alert").show()
